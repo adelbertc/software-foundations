@@ -1223,7 +1223,7 @@ Proof.
   destruct l2; simpl; try inversion H; auto.
   rewrite IHl1. reflexivity.
   inversion H. reflexivity.
-  
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars (override_permute) *)
