@@ -98,9 +98,6 @@ Qed.
       ex nat (fun n => beautiful (S n))
 ]] 
     mean? *)
-
-(* FILL IN HERE *)
-
 (*
 *)
 (** **** Exercise: 1 star (dist_not_exists) *)
@@ -109,10 +106,15 @@ Qed.
 
 Theorem dist_not_exists : forall (X:Type) (P : X -> Prop),
   (forall x, P x) -> ~ (exists x, ~ P x).
-Proof. 
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
+Proof.
+  intros.
+  unfold not.
+  intros.
+  inversion H0.
+  apply H1.
+  apply H.
+Qed.
+  
 (** **** Exercise: 3 stars, optional (not_exists_dist) *)
 (** (The other direction of this theorem requires the classical "law
     of the excluded middle".) *)
@@ -122,8 +124,15 @@ Theorem not_exists_dist :
   forall (X:Type) (P : X -> Prop),
     ~ (exists x, ~ P x) -> (forall x, P x).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  unfold excluded_middle.
+  unfold not.
+  intros.
+  induction H with (P x).
+  apply H1.
+  induction H0.
+  exists x.
+  apply H1.
+Qed.
 
 (** **** Exercise: 2 stars (dist_exists_or) *)
 (** Prove that existential quantification distributes over
@@ -132,8 +141,29 @@ Proof.
 Theorem dist_exists_or : forall (X:Type) (P Q : X -> Prop),
   (exists x, P x \/ Q x) <-> (exists x, P x) \/ (exists x, Q x).
 Proof.
-   (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros.
+  split.
+  intros.
+  induction H.
+  induction H.
+  left.
+  exists witness.
+  apply H.
+  right.
+  exists witness.
+  apply H.
+
+  intros.
+  induction H.
+  inversion H.
+  exists witness.
+  left.
+  apply H0.
+  inversion H.
+  exists witness.
+  right.
+  apply H0.
+Qed.
 
 (* ###################################################### *)
 (** * Evidence-carrying booleans. *)
@@ -238,13 +268,12 @@ Proof.
 Theorem override_shadow' : forall (X:Type) x1 x2 k1 k2 (f : nat->X),
   (override' (override' f k1 x2) k1 x1) k2 = (override' f k1 x1) k2.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
-
-
-
-
+  intros.
+  unfold override'.
+  destruct (eq_nat_dec k1 k2).
+  reflexivity.
+  reflexivity.
+Qed.
 
 (* ####################################################### *)
 (** * Additional Exercises *)
@@ -254,9 +283,9 @@ Proof.
     type [X] and a property [P : X -> Prop], such that [all X P l]
     asserts that [P] is true for every element of the list [l]. *)
 
-Inductive all (X : Type) (P : X -> Prop) : list X -> Prop :=
-  (* FILL IN HERE *)
-.
+Inductive all {X : Type} (P : X -> Prop) : list X -> Prop :=
+  | all_nil : all P []
+  | all_cons x xs : P x -> all P xs -> all P (x :: xs).
 
 (** Recall the function [forallb], from the exercise
     [forall_exists_challenge] in chapter [Poly]: *)
@@ -274,8 +303,39 @@ Fixpoint forallb {X : Type} (test : X -> bool) (l : list X) : bool :=
     Are there any important properties of the function [forallb] which
     are not captured by your specification? *)
 
-(* FILL IN HERE *)
-(** [] *)
+Theorem forallb_all : forall X (test : X -> bool) (xs : list X),
+                      forallb test xs = true <-> all (fun x => test x = true) xs.
+Proof.
+  intros. split.
+  Case "->".
+    intros.
+    induction xs as [|y ys].
+    SCase "xs = []".
+      apply all_nil.
+    SCase "xs = y :: ys".
+      apply all_cons.
+      simpl in H.
+      apply andb_true_elim1 in H.
+      apply H.
+      apply IHys.
+      simpl in H.
+      apply andb_true_elim2 in H.
+      apply H.
+  Case "<-".
+    intros.
+    induction xs as [|y ys].
+    SCase "xs = []".
+      reflexivity.
+    SCase "xs = y :: ys".
+      simpl.
+      apply andb_true_intro.
+      split.
+      inversion H.
+      apply H2.
+      apply IHys.
+      inversion H.
+      apply H3.
+Qed.
 
 (** **** Exercise: 4 stars, advanced (filter_challenge) *)
 (** One of the main purposes of Coq is to prove that programs match
@@ -302,17 +362,16 @@ Fixpoint forallb {X : Type} (test : X -> bool) (l : list X) : bool :=
     for one list to be a merge of two others.  Do this with an
     inductive relation, not a [Fixpoint].)  *)
 
-(* FILL IN HERE *)
-(** [] *)
-
 (** **** Exercise: 5 stars, advanced, optional (filter_challenge_2) *)
 (** A different way to formally characterize the behavior of [filter]
     goes like this: Among all subsequences of [l] with the property
     that [test] evaluates to [true] on all their members, [filter test
     l] is the longest.  Express this claim formally and prove it. *)
 
-(* FILL IN HERE *)
-(** [] *)
+Inductive subseq {X : Type} : list X -> list X -> Prop :=
+  | subseq_nil : forall l, subseq [] l
+  | subseq_cons : forall h l1 l2, subseq l1 l2 -> subseq (h :: l1) (h :: l2)
+  | subseq_pre : forall h l1 l2, subseq l1 l2 -> subseq l1 (h :: l2).
 
 (** **** Exercise: 4 stars, advanced (no_repeats) *)
 (** The following inductively defined proposition... *)
@@ -327,21 +386,87 @@ Inductive appears_in {X:Type} (a:X) : list X -> Prop :=
     Here's a pair of warm-ups about [appears_in].
 *)
 
+Lemma app_right_identity : forall (X : Type) (l : list X), l ++ [] = l.
+Proof.
+  intros.
+  induction l as [|x xs].
+  reflexivity.
+  simpl.
+  rewrite IHxs.
+  reflexivity.
+Qed.
+
 Lemma appears_in_app : forall (X:Type) (xs ys : list X) (x:X), 
      appears_in x (xs ++ ys) -> appears_in x xs \/ appears_in x ys.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  generalize dependent ys.
+  induction xs as [|h t].
+  Case "xs = []".
+    simpl.
+    intros.
+    right.
+    apply H.
+  Case "xs = h :: t".
+    simpl.
+    intros.
+    inversion H.
+    rewrite H1 in IHt.
+    rewrite H1 in H.
+    destruct ys eqn:Heqn.
+    left.
+    rewrite app_right_identity in H.
+    apply H.
+    left.
+    apply ai_here.
+    destruct ys eqn:Heqn.
+    rewrite app_right_identity in H.
+    left.
+    apply H.
+    apply IHt in H1.
+    inversion H1.
+    left.
+    apply ai_later.
+    apply H3.
+    right.
+    apply H3.
+Qed.
 
 Lemma app_appears_in : forall (X:Type) (xs ys : list X) (x:X), 
      appears_in x xs \/ appears_in x ys -> appears_in x (xs ++ ys).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  destruct H.
+  induction xs.
+  inversion H.
 
+  inversion H.
+  simpl.
+  apply ai_here.
+
+  induction xs.
+  inversion H1.
+
+  simpl.
+  apply ai_later.
+  apply IHxs.
+  apply H1.
+
+  induction xs.
+  simpl.
+  apply H.
+
+  simpl.
+  apply ai_later.
+  apply IHxs.
+Qed.
+  
 (** Now use [appears_in] to define a proposition [disjoint X l1 l2],
     which should be provable exactly when [l1] and [l2] are
     lists (with elements of type X) that have no elements in common. *)
 
-(* FILL IN HERE *)
+Definition disjoint {X : Type} (l1 l2 : list X) : Prop :=
+  forall x, appears_in x l1 -> not (appears_in x l2).
 
 (** Next, use [appears_in] to define an inductive proposition
     [no_repeats X l], which should be provable exactly when [l] is a
@@ -350,14 +475,12 @@ Proof.
     [no_repeats bool []] should be provable, while [no_repeats nat
     [1,2,1]] and [no_repeats bool [true,true]] should not be.  *)
 
-(* FILL IN HERE *)
+Inductive no_repeats {X : Type} : list X -> Prop :=
+  | no_repeats_nil : no_repeats []
+  | no_repeats_cons : forall (x : X) (xs : list X), no_repeats xs -> not (appears_in x xs) -> no_repeats (x :: xs).
 
 (** Finally, state and prove one or more interesting theorems relating
     [disjoint], [no_repeats] and [++] (list append).  *)
-
-(* FILL IN HERE *)
-(** [] *)
-
 
 (** **** Exercise: 3 stars (nostutter) *)
 (** Formulating inductive definitions of predicates is an important
@@ -373,8 +496,9 @@ Proof.
     does not stutter.) *)
 
 Inductive nostutter:  list nat -> Prop :=
- (* FILL IN HERE *)
-.
+  | nostutter_nil : nostutter []
+  | nostutter_single : forall (n : nat), nostutter [n]                            
+  | nostutter_cons : forall (n m : nat) (l : list nat), n <> m -> nostutter (m :: l) -> nostutter (n :: m :: l).                            
 
 (** Make sure each of these tests succeeds, but you are free
     to change the proof if the given one doesn't work for you.
@@ -389,33 +513,20 @@ Inductive nostutter:  list nat -> Prop :=
     tactics.  *)
 
 Example test_nostutter_1:      nostutter [3;1;4;1;5;6].
-(* FILL IN HERE *) Admitted.
-(* 
   Proof. repeat constructor; apply beq_nat_false; auto. Qed.
-*)
 
 Example test_nostutter_2:  nostutter [].
-(* FILL IN HERE *) Admitted.
-(* 
   Proof. repeat constructor; apply beq_nat_false; auto. Qed.
-*)
 
 Example test_nostutter_3:  nostutter [5].
-(* FILL IN HERE *) Admitted.
-(* 
   Proof. repeat constructor; apply beq_nat_false; auto. Qed.
-*)
 
 Example test_nostutter_4:      not (nostutter [3;1;1;4]).
-(* FILL IN HERE *) Admitted.
-(* 
   Proof. intro.
   repeat match goal with 
     h: nostutter _ |- _ => inversion h; clear h; subst 
   end.
   contradiction H1; auto. Qed.
-*)
-(** [] *)
 
 (** **** Exercise: 4 stars, advanced (pigeonhole principle) *)
 (** The "pigeonhole principle" states a basic fact about counting:
@@ -429,22 +540,41 @@ Example test_nostutter_4:      not (nostutter [3;1;1;4]).
 
 Lemma app_length : forall (X:Type) (l1 l2 : list X),
   length (l1 ++ l2) = length l1 + length l2. 
-Proof. 
-  (* FILL IN HERE *) Admitted.
-
+Proof.
+  intros.
+  induction l1.
+  simpl.
+  reflexivity.
+  simpl.
+  apply f_equal.
+  apply IHl1.
+Qed.
+  
 Lemma appears_in_app_split : forall (X:Type) (x:X) (l:list X),
   appears_in x l -> 
   exists l1, exists l2, l = l1 ++ (x::l2).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  induction H.
+  exists [].
+  exists l.
+  simpl.
+  reflexivity.
+  inversion IHappears_in.
+  inversion H0.
+  rewrite H1.
+  exists (b :: witness).
+  exists witness0.
+  reflexivity.
+Qed.
 
 (** Now define a predicate [repeats] (analogous to [no_repeats] in the
    exercise above), such that [repeats X l] asserts that [l] contains
    at least one repeated element (of type [X]).  *)
 
 Inductive repeats {X:Type} : list X -> Prop :=
-  (* FILL IN HERE *)
-.
+  | repeats_double : forall (x : X), repeats [x;x]
+  | repeats_cons : forall (x : X) (xs : list X), repeats xs -> repeats (x :: xs).                                           
 
 (** Now here's a way to formalize the pigeonhole principle. List [l2]
     represents a list of pigeonhole labels, and list [l1] represents
@@ -463,11 +593,7 @@ Theorem pigeonhole_principle: forall (X:Type) (l1  l2:list X),
    length l2 < length l1 -> 
    repeats l1.  
 Proof.
-   intros X l1. induction l1 as [|x l1'].
+  (* intros X l1. induction l1 as [|x l1']. *)
   (* FILL IN HERE *) Admitted.
-(** [] *)
-
-(* FILL IN HERE *)
-
 
 (* $Date: 2014-02-22 09:43:41 -0500 (Sat, 22 Feb 2014) $ *)
