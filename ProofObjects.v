@@ -186,11 +186,11 @@ Print eight_is_beautiful'''.
 Theorem six_is_beautiful :
   beautiful 6.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  apply b_sum with (n := 3) (m := 3).
+  apply b_3. apply b_3.
+Qed.
 
-Definition six_is_beautiful' : beautiful 6 :=
-  (* FILL IN HERE *) admit.
-(** [] *)
+Definition six_is_beautiful' : beautiful 6 := b_sum 3 3 b_3 b_3.
 
 (** **** Exercise: 1 star (nine_is_beautiful) *)
 (** Give a tactic proof and a proof object showing that [9] is [beautiful]. *)
@@ -198,11 +198,12 @@ Definition six_is_beautiful' : beautiful 6 :=
 Theorem nine_is_beautiful :
   beautiful 9.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  apply b_sum with (n := 3) (m := 6).
+  apply b_3. apply six_is_beautiful.
+Qed.
 
 Definition nine_is_beautiful' : beautiful 9 :=
-  (* FILL IN HERE *) admit.
-(** [] *)
+  b_sum 3 6 b_3 six_is_beautiful.
 
 (* ##################################################### *)
 (** * Quantification, Implications and Functions *)
@@ -292,20 +293,15 @@ Definition beatiful_plus3'' : Prop :=
 (** Give a proof object corresponding to the theorem [b_times2] from Prop.v *)
 
 Definition b_times2': forall n, beautiful n -> beautiful (2*n) :=
-  (* FILL IN HERE *) admit.
-(** [] *)
-
-
+  fun (n : nat) => fun (H : beautiful n) =>
+    eq_ind_r (fun m : nat => beautiful (n + m)) (b_sum n n H H) (plus_0_r n).
 
 (** **** Exercise: 2 stars, optional (gorgeous_plus13_po) *) 
 (** Give a proof object corresponding to the theorem [gorgeous_plus13] from Prop.v *)
 
 Definition gorgeous_plus13_po: forall n, gorgeous n -> gorgeous (13+n):=
-   (* FILL IN HERE *) admit.
-(** [] *)
-
-
-
+  fun (n : nat) => fun (H : gorgeous n) =>
+    g_plus5 (8 + n) (g_plus5 (3 + n) (g_plus3 n H)).
 
 (** It is particularly revealing to look at proof objects involving the 
 logical connectives that we defined with inductive propositions in Logic.v. *)
@@ -333,7 +329,6 @@ Print and_example.
     [and_example] to avoid cluttering the proof object.  What would
     you guess the proof object will look like if we uncomment them?
     Try it and see. *)
-(** [] *)
 
 Theorem and_commut : forall P Q : Prop, 
   P /\ Q -> Q /\ P.
@@ -378,9 +373,13 @@ we get: *)
 (** Construct a proof object demonstrating the following proposition. *)
 
 Definition conj_fact : forall P Q R, P /\ Q -> Q /\ R -> P /\ R :=
-  (* FILL IN HERE *) admit.
-(** [] *)
-
+  fun (P Q R : Prop) (H0 : P /\ Q) (H1 : Q /\ R) =>
+  match H0 with
+  | conj HP HQ =>
+      match H1 with
+      | conj _ HR => conj P R HP HR
+      end
+  end.
 
 (** **** Exercise: 2 stars, advanced, optional (beautiful_iff_gorgeous) *)
 
@@ -393,16 +392,19 @@ Definition conj_fact : forall P Q R, P /\ Q -> Q /\ R -> P /\ R :=
 
 Definition beautiful_iff_gorgeous :
   forall n, beautiful n <-> gorgeous n :=
-  (* FILL IN HERE *) admit.
-(** [] *)
-
+  fun (n : nat) =>
+    conj (beautiful n -> gorgeous n) (gorgeous n -> beautiful n) (beautiful__gorgeous n) (gorgeous__beautiful n).
 
 (** **** Exercise: 2 stars, optional (or_commut'') *)
 (** Try to write down an explicit proof object for [or_commut] (without
     using [Print] to peek at the ones we already defined!). *)
 
-(* FILL IN HERE *)
-(** [] *)
+Definition or_commut_fact : forall P Q, P \/ Q -> Q \/ P :=
+  fun (P Q : Prop) (H : P \/ Q) =>
+  match H with
+  | or_introl HP => or_intror Q P HP
+  | or_intror HQ => or_introl Q P HQ
+  end.
 
 (** Recall that we model an existential for a property as a pair consisting of 
 a witness value and a proof that the witness obeys that property. 
@@ -426,10 +428,7 @@ Definition snie : some_nat_is_even :=
 (** Complete the definition of the following proof object: *)
 
 Definition p : ex _ (fun n => beautiful (S n)) :=
-(* FILL IN HERE *) admit.
-(** [] *)
-
-
+  ex_intro _ (fun n => beautiful (S n)) 2 b_3.
 
 (* ##################################################### *)
 (** * Giving Explicit Arguments to Lemmas and Hypotheses *)
@@ -495,10 +494,11 @@ Example trans_eq_example' : forall (a b c d e f : nat),
      [c;d] = [e;f] ->
      [a;b] = [e;f].
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
-
+  intros a b c d e f eq1 eq2.
+  apply (trans_eq _ _ [c;d] _).
+  apply eq1.
+  apply eq2.
+Qed.
 
 (* ##################################################### *)
 (** * Programming with Tactics (Optional) *)
