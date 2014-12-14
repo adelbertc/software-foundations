@@ -73,8 +73,13 @@ Proof.
 Theorem plus_one_r' : forall n:nat, 
   n + 1 = S n.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  apply nat_ind.
+  reflexivity.
+  intros.
+  simpl.
+  rewrite H.
+  reflexivity.
+Qed.
 
 (** Coq generates induction principles for every datatype defined with
     [Inductive], including those that aren't recursive. (Although 
@@ -118,7 +123,6 @@ Inductive rgb : Type :=
   | green : rgb
   | blue : rgb.
 Check rgb_ind.
-(** [] *)
 
 (** Here's another example, this time with one of the constructors
     taking some arguments. *)
@@ -143,8 +147,9 @@ Inductive natlist1 : Type :=
   | nnil1 : natlist1
   | nsnoc1 : natlist1 -> nat -> natlist1.
 
+Check natlist1_ind.
+
 (** Now what will the induction principle look like? *)
-(** [] *)
 
 (** From these examples, we can extract this general rule:
 
@@ -172,8 +177,8 @@ Inductive byntree : Type :=
  | bempty : byntree  
  | bleaf  : yesno -> byntree
  | nbranch : yesno -> byntree -> byntree -> byntree.
-(** [] *)
 
+Check byntree_ind.
 
 (** **** Exercise: 1 star, optional (ex_set) *)
 (** Here is an induction principle for an inductively defined
@@ -186,9 +191,10 @@ Inductive byntree : Type :=
     Give an [Inductive] definition of [ExSet]: *)
 
 Inductive ExSet : Type :=
-  (* FILL IN HERE *)
-.
-(** [] *)
+  | con1 : bool -> ExSet
+  | con2 : nat -> ExSet -> ExSet.
+
+Check ExSet_ind.
 
 (** What about polymorphic datatypes?
 
@@ -222,7 +228,6 @@ Inductive tree (X:Type) : Type :=
   | leaf : X -> tree X
   | node : tree X -> tree X -> tree X.
 Check tree_ind.
-(** [] *)
 
 (** **** Exercise: 1 star, optional (mytype) *)
 (** Find an inductive definition that gives rise to the
@@ -234,8 +239,14 @@ Check tree_ind.
             (forall m : mytype X, P m -> 
                forall n : nat, P (constr3 X m n)) ->
             forall m : mytype X, P m                   
-*) 
-(** [] *)
+*)
+
+Inductive mytype (X : Type) : Type :=
+  | constr1 : X -> mytype X
+  | constr2 : nat -> mytype X
+  | constr3 : mytype X -> nat -> mytype X.
+
+Check mytype_ind.
 
 (** **** Exercise: 1 star, optional (foo) *)
 (** Find an inductive definition that gives rise to the
@@ -247,8 +258,14 @@ Check tree_ind.
              (forall f1 : nat -> foo X Y,
                (forall n : nat, P (f1 n)) -> P (quux X Y f1)) ->
              forall f2 : foo X Y, P f2       
-*) 
-(** [] *)
+*)
+
+Inductive foo (X Y : Type) : Type :=
+  | bar : X -> foo X Y
+  | baz : Y -> foo X Y
+  | quux : (nat -> foo X Y) -> foo X Y.
+
+Check foo_ind.
 
 (** **** Exercise: 1 star, optional (foo') *)
 (** Consider the following inductive definition: *)
@@ -256,6 +273,8 @@ Check tree_ind.
 Inductive foo' (X:Type) : Type :=
   | C1 : list X -> foo' X -> foo' X
   | C2 : foo' X.
+
+Check foo'_ind.
 
 (** What induction principle will Coq generate for [foo']?  Fill
    in the blanks, then check your answer with Coq.)
@@ -267,8 +286,6 @@ Inductive foo' (X:Type) : Type :=
              ___________________________________________ ->
              forall f : foo' X, ________________________
 *)
-
-(** [] *)
 
 (* ##################################################### *)
 (** ** Induction Hypotheses *)
@@ -407,9 +424,28 @@ Proof.
     induction, and state the theorem and proof in terms of this
     defined proposition.  *)
 
-(* FILL IN HERE *)
-(** [] *)
+Definition P_plus_assoc (n m o : nat) : Prop := n + (m + o) = (n + m) + o.
 
+Theorem plus_assoc'' : forall (n m o : nat), P_plus_assoc n m o.
+Proof.
+  intros.
+  induction n.
+  reflexivity.
+  unfold P_plus_assoc.
+  unfold P_plus_assoc in IHn.
+  simpl.
+  rewrite IHn.
+  reflexivity.
+Qed.
+
+Definition P_plus_comm (n m : nat) : Prop := n + m = m + n.
+
+Theorem plus_comm''' : forall (n m : nat), P_plus_comm n m.
+Proof.
+  induction n.
+  intros m. unfold P_plus_comm. simpl. rewrite plus_0_r. reflexivity.
+  intros m. unfold P_plus_comm. unfold P_plus_comm in IHn. simpl. rewrite IHn. rewrite <- plus_n_Sm. reflexivity.
+Qed.
 
 (** ** Generalizing Inductions. *)
 
@@ -837,7 +873,13 @@ Check le_ind.
            ________________________________________________
 
 *)
-(** [] *)
+
+   Inductive foo'' (X : Set) (Y : Set) : Set :=
+     | foo1 : X -> foo'' X Y
+     | foo2 : Y -> foo'' X Y
+     | foo3 : foo'' X Y -> foo'' X Y.
+   
+Check foo''_ind.
 
 (** **** Exercise: 2 stars, optional (bar_ind_principle) *)
 (** Consider the following induction principle:
@@ -854,8 +896,13 @@ Check le_ind.
      | bar3 : ________________________________________.
 
 *)
-(** [] *)
+   Inductive bar' : Set :=
+     | bar1 : nat -> bar'
+     | bar2 : bar' -> bar'
+     | bar3 : bool -> bar' -> bar'.
 
+Check bar'_ind.
+   
 (** **** Exercise: 2 stars, optional (no_longer_than_ind) *)
 (** Given the following inductively defined proposition:
   Inductive no_longer_than (X : Set) : (list X) -> nat -> Prop :=
@@ -878,8 +925,15 @@ Check le_ind.
            ____________________
 
 *)
-(** [] *)
 
+  Inductive no_longer_than (X : Set) : (list X) -> nat -> Prop :=
+    | nlt_nil  : forall n, no_longer_than X [] n
+    | nlt_cons : forall x l n, no_longer_than X l n -> 
+                               no_longer_than X (x::l) (S n)
+    | nlt_succ : forall l n, no_longer_than X l n -> 
+                             no_longer_than X l (S n).
+
+Check no_longer_than_ind.
 
 (* ##################################################### *)
 (** ** Induction Principles for other Logical Propositions *)
@@ -921,14 +975,12 @@ Check eq'_ind.
 (** **** Exercise: 1 star, optional (and_ind_principle) *)
 (** See if you can predict the induction principle for conjunction. *)
 
-(* Check and_ind. *)
-(** [] *)
+Check and_ind.
 
 (** **** Exercise: 1 star, optional (or_ind_principle) *)
 (** See if you can predict the induction principle for disjunction. *)
 
-(* Check or_ind. *)
-(** [] *)
+Check or_ind.
 
 Check and_ind.
 
@@ -967,8 +1019,7 @@ Check and_ind.
 (** **** Exercise: 1 star, optional (False_ind_principle) *)
 (** Can you predict the induction principle for falsehood? *)
 
-(* Check False_ind. *)
-(** [] *)
+Check False_ind.
 
 (** Here's the induction principle that Coq generates for existentials: *)
 
